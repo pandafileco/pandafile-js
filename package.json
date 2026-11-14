@@ -1,0 +1,72 @@
+{
+  "name": "@pandafile/sdk",
+  "version": "0.1.0",
+  "description": "Official Pandafile SDK and CLI: send large files with resumable uploads, file requests, e-signatures and webhooks.",
+  "keywords": [
+    "pandafile",
+    "file transfer",
+    "large files",
+    "upload",
+    "tus",
+    "resumable",
+    "sdk",
+    "cli",
+    "webhooks"
+  ],
+  "homepage": "https://pandafile.co/developers/sdks",
+  "bugs": {
+    "url": "https://github.com/pandafileco/pandafile-js/issues"
+  },
+  "license": "MIT",
+  "author": "3XAYA LTD (https://pandafile.co)",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./openapi.json": "./openapi.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "pandafile": "./bin/pandafile.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "openapi.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test \"tests/*.spec.mjs\"",
+    "test:only": "node --test \"tests/*.spec.mjs\"",
+    "prepublishOnly": "npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.6.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pandafileco/pandafile-js.git"
+  }
+}
