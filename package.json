@@ -1,6 +1,6 @@
 {
   "name": "@pandafile/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official Pandafile SDK and CLI: send large files with resumable uploads, file requests, e-signatures and webhooks.",
   "keywords": [
     "pandafile",

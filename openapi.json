@@ -676,6 +676,107 @@
         "x-pandafile-test-mode": true
       }
     },
+    "/transfers/from-url": {
+      "post": {
+        "operationId": "createTransferFromUrl",
+        "tags": [
+          "Transfers"
+        ],
+        "summary": "Create a transfer from URLs",
+        "description": "Pandafile downloads each https URL itself (public addresses only, at most 3 redirects, up to your plan's per-transfer limit), creates the transfer and completes it – the way Zapier and Make send files. Waits up to 20 seconds: 201 with status \"ready\", or 202 with status \"uploading\" while big files keep downloading in the background (progress: GET /transfers/{id}/import). If a download fails, the transfer is deleted and the import reports the error. With a test key the transfer is test data (nobody is emailed, 24-hour expiry).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PandafileVersion"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferFromUrlResult"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              },
+              "Pandafile-Version": {
+                "$ref": "#/components/headers/Pandafile-Version"
+              },
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted: the files are still downloading (status \"uploading\"). The transfer.ready webhook fires when it is done.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferFromUrlResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-pandafile-scope": "write",
+        "x-pandafile-test-mode": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferFromUrl"
+              },
+              "example": {
+                "title": "Invoices March",
+                "files": [
+                  {
+                    "url": "https://example.com/exports/invoices-march.pdf"
+                  }
+                ],
+                "recipients": [
+                  "accounts@example.com"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/transfers/{id}": {
       "get": {
         "operationId": "getTransfer",
@@ -755,7 +856,7 @@
           "Transfers"
         ],
         "summary": "Update a transfer",
-        "description": "Change title and message, extend the expiry (Pro/Team, up to 90 days after sending), or set / clear the download password. Live transfers only.",
+        "description": "Change title and message, extend the expiry (Pro/Team, up to 90 days after sending: GET /transfers/{id} returns that limit as transfer.max_expires_at), or set / clear the download password. Live transfers only.",
         "parameters": [
           {
             "name": "id",
@@ -869,7 +970,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/Deleted"
                 }
               }
             },
@@ -1254,6 +1355,80 @@
             }
           }
         }
+      }
+    },
+    "/transfers/{id}/import": {
+      "get": {
+        "operationId": "getTransferImport",
+        "tags": [
+          "Transfers"
+        ],
+        "summary": "Progress of a URL import",
+        "description": "For transfers made with POST /transfers/from-url: per file bytes received, then ready or failed (with the error). Kept for 24 hours.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Transfer id.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]{6,20}$"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PandafileVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferImport"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/X-Request-Id"
+              },
+              "Pandafile-Version": {
+                "$ref": "#/components/headers/Pandafile-Version"
+              },
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-pandafile-scope": "read",
+        "x-pandafile-test-mode": true
       }
     },
     "/transfers/{id}/downloads": {
@@ -4684,6 +4859,28 @@
           "ok"
         ]
       },
+      "Deleted": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "id": {
+            "type": "string",
+            "description": "Id of the deleted object."
+          },
+          "deleted": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok",
+          "id",
+          "deleted"
+        ]
+      },
       "Plan": {
         "type": "object",
         "properties": {
@@ -5203,6 +5400,253 @@
           }
         }
       },
+      "TransferFromUrl": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "https URL of the file. Redirects (at most 3) are followed; every hop must be a public https address."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "File name to use (default: from Content-Disposition, else the last part of the URL path)."
+                }
+              },
+              "required": [
+                "url"
+              ]
+            },
+            "description": "1–20 files."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 120 characters."
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Up to 1000 characters."
+          },
+          "recipients": {
+            "type": [
+              "array",
+              "string",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Emailed a personal link when the transfer is ready (never in test mode). Array, or one string separated by commas."
+          },
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Download password (8–200 characters)."
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Expiry (ISO 8601), from 1 hour up to 90 days from now. Not for test keys.",
+            "format": "date-time"
+          },
+          "async": {
+            "type": [
+              "boolean",
+              "string",
+              "null"
+            ],
+            "description": "true: answer 202 straight away instead of waiting up to 20 seconds for the files."
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "description": "Empty optional fields (null or \"\") count as not given – no-code tools send them that way.",
+        "example": {
+          "title": "Invoices March",
+          "files": [
+            {
+              "url": "https://example.com/exports/invoices-march.pdf"
+            }
+          ],
+          "recipients": [
+            "accounts@example.com"
+          ]
+        }
+      },
+      "TransferImport": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "transfer_import"
+          },
+          "id": {
+            "type": "string",
+            "description": "Transfer id."
+          },
+          "status": {
+            "type": "string",
+            "description": "downloading → ready, or failed (the transfer is then deleted).",
+            "enum": [
+              "downloading",
+              "ready",
+              "failed"
+            ]
+          },
+          "livemode": {
+            "type": "boolean",
+            "description": ""
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "source_host": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "",
+                  "enum": [
+                    "pending",
+                    "downloading",
+                    "done",
+                    "failed"
+                  ]
+                },
+                "bytes_received": {
+                  "type": "integer",
+                  "description": ""
+                },
+                "bytes_total": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "null while the size is unknown."
+                }
+              }
+            }
+          },
+          "bytes_received": {
+            "type": "integer",
+            "description": "All files together."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "description": "Same fields as an API error (type, code, message, param, reason)."
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": ""
+          }
+        },
+        "required": [
+          "object",
+          "id",
+          "status"
+        ]
+      },
+      "TransferFromUrlResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Transfer id."
+          },
+          "object": {
+            "type": "string",
+            "const": "transfer"
+          },
+          "status": {
+            "type": "string",
+            "description": "ready (201) or uploading (202: still downloading – watch GET /transfers/{id}/import or the transfer.ready webhook).",
+            "enum": [
+              "ready",
+              "uploading"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "Share link (works once the transfer is ready)."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": ""
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": ""
+            }
+          },
+          "livemode": {
+            "type": "boolean",
+            "description": ""
+          },
+          "import": {
+            "$ref": "#/components/schemas/TransferImport"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "url",
+          "import"
+        ]
+      },
       "Recipient": {
         "type": "object",
         "properties": {
@@ -5346,6 +5790,18 @@
               "livemode": {
                 "type": "boolean",
                 "description": ""
+              },
+              "can_send_again": {
+                "type": "boolean",
+                "description": "The transfer can be sent again as a new transfer from the dashboard (\"Send again\"): live, your own share link (not a file request upload), not test data and not end-to-end encrypted."
+              },
+              "max_expires_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "The latest expires_at this transfer can be given (PATCH expires_at or extend): created_at plus your plan's max_expiry_days. null when the transfer is not live (still uploading, expired, deleted or blocked), is test data, or your plan cannot change the expiry."
               }
             }
           },
@@ -5452,7 +5908,7 @@
           },
           "expires_at": {
             "type": "string",
-            "description": "Later expiry, at most 90 days after the transfer was sent (Pro/Team).",
+            "description": "Later expiry, at most 90 days after the transfer was sent (Pro/Team): the transfer's max_expires_at.",
             "format": "date-time"
           },
           "extend": {

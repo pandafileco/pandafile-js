@@ -40,6 +40,13 @@ export interface Ok {
   ok: true;
 }
 
+export interface Deleted {
+  ok: true;
+  /** Id of the deleted object. */
+  id: string;
+  deleted: true;
+}
+
 export interface Plan {
   /** Plan id. */
   name: "free" | "plus" | "pro" | "team";
@@ -195,6 +202,66 @@ export interface Transfer {
   livemode: boolean;
 }
 
+/** Empty optional fields (null or "") count as not given – no-code tools send them that way. */
+export interface TransferFromUrl {
+  /** 1–20 files. */
+  files: {
+    /** https URL of the file. Redirects (at most 3) are followed; every hop must be a public https address. */
+    url: string;
+    /** File name to use (default: from Content-Disposition, else the last part of the URL path). */
+    name?: string;
+  }[];
+  /** Up to 120 characters. */
+  title?: string | null;
+  /** Up to 1000 characters. */
+  message?: string | null;
+  /** Emailed a personal link when the transfer is ready (never in test mode). Array, or one string separated by commas. */
+  recipients?: string[] | string | null;
+  /** Download password (8–200 characters). */
+  password?: string | null;
+  /** Expiry (ISO 8601), from 1 hour up to 90 days from now. Not for test keys. */
+  expires_at?: string | null;
+  /** true: answer 202 straight away instead of waiting up to 20 seconds for the files. */
+  async?: boolean | string | null;
+}
+
+export interface TransferImport {
+  object: "transfer_import";
+  /** Transfer id. */
+  id: string;
+  /** downloading → ready, or failed (the transfer is then deleted). */
+  status: "downloading" | "ready" | "failed";
+  livemode: boolean;
+  files: Array<{
+    name: string | null;
+    source_host: string | null;
+    status: "pending" | "downloading" | "done" | "failed";
+    bytes_received: number;
+    /** null while the size is unknown. */
+    bytes_total: number | null;
+  }>;
+  /** All files together. */
+  bytes_received: number;
+  error: unknown;
+  created_at: string;
+  finished_at: string | null;
+}
+
+export interface TransferFromUrlResult {
+  /** Transfer id. */
+  id: string;
+  object: "transfer";
+  /** ready (201) or uploading (202: still downloading – watch GET /transfers/{id}/import or the transfer.ready webhook). */
+  status: "ready" | "uploading";
+  /** Share link (works once the transfer is ready). */
+  url: string;
+  title: string | null;
+  expires_at: string | null;
+  recipients: string[];
+  livemode: boolean;
+  import: TransferImport;
+}
+
 export interface Recipient {
   email: string;
   /** When the link was emailed. */
@@ -230,6 +297,10 @@ export interface TransferDetail {
     request_id: string | null;
     encrypted: boolean;
     livemode: boolean;
+    /** The transfer can be sent again as a new transfer from the dashboard ("Send again"): live, your own share link (not a file request upload), not test data and not end-to-end encrypted. */
+    can_send_again: boolean;
+    /** The latest expires_at this transfer can be given (PATCH expires_at or extend): created_at plus your plan's max_expiry_days. null when the transfer is not live (still uploading, expired, deleted or blocked), is test data, or your plan cannot change the expiry. */
+    max_expires_at: string | null;
   };
   files: {
     id: string;
@@ -257,7 +328,7 @@ export interface TransferUpdate {
   title?: string | null;
   /** New message (null clears). */
   message?: string | null;
-  /** Later expiry, at most 90 days after the transfer was sent (Pro/Team). */
+  /** Later expiry, at most 90 days after the transfer was sent (Pro/Team): the transfer's max_expires_at. */
   expires_at?: string;
   /** true: 30 more days (same as the dashboard button), within the same 90 days. */
   extend?: boolean;
@@ -648,6 +719,10 @@ export interface ListTransfersParams {
 }
 export type ListTransfersResponse = ListResponse<Transfer>;
 
+/** POST /transfers/from-url – Create a transfer from URLs */
+export type CreateTransferFromUrlBody = TransferFromUrl;
+export type CreateTransferFromUrlResponse = TransferFromUrlResult;
+
 /** GET /transfers/{id} – Get a transfer */
 export type GetTransferResponse = TransferDetail;
 
@@ -656,7 +731,7 @@ export type UpdateTransferBody = TransferUpdate;
 export type UpdateTransferResponse = TransferDetail;
 
 /** DELETE /transfers/{id} – Delete a transfer */
-export type DeleteTransferResponse = Ok;
+export type DeleteTransferResponse = Deleted;
 
 /** POST /transfers/{id}/complete – Complete a transfer */
 export type CompleteTransferBody = {
@@ -688,6 +763,9 @@ export type RemindTransferRecipientResponse = {
   ok: boolean;
   emailed: boolean;
 };
+
+/** GET /transfers/{id}/import – Progress of a URL import */
+export type GetTransferImportResponse = TransferImport;
 
 /** GET /transfers/{id}/downloads – List downloads of a transfer */
 export interface ListTransferDownloadsParams {

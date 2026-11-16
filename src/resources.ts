@@ -59,6 +59,10 @@ export class Domains extends Resource {
 export class Transfers extends Resource {
   /** createTransfer – announce the files; then upload with tus and complete(). Most people want send(). */
   create(body: T.CreateTransferBody, opts?: RequestOptions) { return this._post<T.CreateTransferResponse>('/transfers', body, opts); }
+  /** createTransferFromUrl – Pandafile downloads each https URL itself and completes the transfer (201 ready, or 202 while big files keep downloading). */
+  fromUrl(body: T.CreateTransferFromUrlBody, opts?: RequestOptions) { return this._post<T.CreateTransferFromUrlResponse>('/transfers/from-url', body, opts); }
+  /** getTransferImport – progress of a fromUrl() transfer that is still downloading. */
+  importStatus(id: string, opts?: RequestOptions) { return this._get<T.GetTransferImportResponse>(`/transfers/${enc(id)}/import`, undefined, opts); }
   /** listTransfers – newest first; iterate for every page. */
   list(params: T.ListTransfersParams = {}, opts?: RequestOptions) { return this._list<T.Transfer>('/transfers', params as Query, opts); }
   /** getTransfer – files, recipients, downloads, approvals and stats. */
